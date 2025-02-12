@@ -7,11 +7,6 @@ generator client {
   provider = "prisma-client-js"
 }
 
-generator erd {
-  provider = "prisma-erd-generator"
-  output   = "./erd.svg" // Specify the output file (SVG format)
-}
-
 model User {
   userId      String   @id @default(cuid())
   email       String   @unique
