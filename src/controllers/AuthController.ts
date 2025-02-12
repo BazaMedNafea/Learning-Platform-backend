@@ -73,8 +73,6 @@ export const registerHandler = catchErrors(async (req, res) => {
     firstName,
     lastName,
     role,
-    phoneNumber: additionalData.phoneNumber,
-    address: additionalData.address,
   };
 
   // Create the user

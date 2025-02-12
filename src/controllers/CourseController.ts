@@ -7,7 +7,7 @@ import {
   NOT_FOUND,
   UNAUTHORIZED,
 } from "../constants/http";
-import fs from "fs";
+
 import appAssert from "../utils/appAssert";
 import catchErrors from "../utils/catchErrors";
 
@@ -19,13 +19,18 @@ export const createCourseHandler = catchErrors(async (req, res) => {
   const teacherId = req.userId;
 
   console.log(`Creating course with teacherId: ${teacherId}`);
+  console.log(`Received data:`, req.body);
 
   // Validate input
+  appAssert(title, BAD_REQUEST, "Missing required field: title");
+  appAssert(description, BAD_REQUEST, "Missing required field: description");
   appAssert(
-    title && description && isPublic !== undefined && subjectId && image,
+    isPublic !== undefined,
     BAD_REQUEST,
-    "Missing required fields"
+    "Missing required field: isPublic"
   );
+  appAssert(subjectId, BAD_REQUEST, "Missing required field: subjectId");
+  appAssert(image, BAD_REQUEST, "Missing required field: image");
 
   // Ensure the teacher exists
   const teacher = await prisma.teacher.findUnique({
