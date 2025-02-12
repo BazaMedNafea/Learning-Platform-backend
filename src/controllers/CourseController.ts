@@ -345,7 +345,7 @@ export const getCourseByIdHandler = catchErrors(async (req, res) => {
     include: {
       topics: {
         include: {
-          contents: false,
+          contents: true,
         },
       },
       teacher: {
