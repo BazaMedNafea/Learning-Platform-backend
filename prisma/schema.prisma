@@ -1,0 +1,245 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+generator erd {
+  provider = "prisma-erd-generator"
+  output   = "./erd.svg" // Specify the output file (SVG format)
+}
+
+model User {
+  userId      String   @id @default(cuid())
+  email       String   @unique
+  password    String
+  role        UserRole
+  firstName   String
+  lastName    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  phoneNumber String?
+  address     String?
+
+  // Relationships
+  parent           Parent? // One-to-one relationship with Parent
+  teacher          Teacher? // One-to-one relationship with Teacher
+  students         Student[] // One-to-many relationship with Student
+  sessions         Session[]
+  messagesSent     Message[] @relation("Sender")
+  messagesReceived Message[] @relation("Receiver")
+
+  Message Message[]
+}
+
+enum UserRole {
+  ADMIN
+  PARENT
+  TEACHER
+  STUDENT
+}
+
+model Parent {
+  parentId       String         @id @default(cuid())
+  userId         String         @unique
+  user           User           @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  students       Student[]
+  Enrollment     Enrollment[]
+  approvalStatus ApprovalStatus @default(PENDING) // New field for approval status
+}
+
+model Student {
+  studentId      String         @id @default(cuid())
+  parentId       String // Link to the parent
+  parent         Parent         @relation(fields: [parentId], references: [parentId])
+  firstName      String
+  lastName       String
+  level          Level // New field for the level of study
+  year           Year // New field for the year of study
+  stream         Stream? // New field for stream (optional)
+  grades         Grade[]
+  User           User?          @relation(fields: [userUserId], references: [userId])
+  userUserId     String?
+  Enrollment     Enrollment[]
+  approvalStatus ApprovalStatus @default(PENDING) // New field for approval status
+}
+
+model Teacher {
+  teacherId String @id @default(cuid())
+  userId    String @unique
+  user      User   @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  // Additional fields if needed
+  bio String?
+
+  // Relationships
+  courses  Course[]
+  subjects Subject[]
+}
+
+enum Level {
+  PRIMARY // 5 years (Algerian primary school)
+  MIDDLE // 4 years (Algerian middle school)
+  SECONDARY // 3 years (Algerian secondary school)
+}
+
+enum Stream {
+  SCIENCES
+  MATHEMATICS
+  LITERATURE
+  TECHNICAL
+}
+
+model Subject {
+  subjectId String    @id @default(cuid())
+  name      String
+  level     Level
+  stream    Stream?
+  year      Year // New field for the academic year
+  teachers  Teacher[]
+
+  // Relationship to Course
+  courses Course[]
+}
+
+enum Year {
+  FIRST
+  SECOND
+  THIRD
+  FOURTH
+  FIFTH
+}
+
+model Course {
+  courseId    String  @id @default(cuid())
+  title       String
+  description String?
+  teacherId   String
+  teacher     Teacher @relation(fields: [teacherId], references: [teacherId], onDelete: Cascade)
+  isPublic    Boolean @default(false) // Public courses don't need approval
+  subjectId   String
+  subject     Subject @relation(fields: [subjectId], references: [subjectId], onDelete: Cascade)
+  image       String? // Store image as Base64 string
+
+  // Relationships
+  quizzes     Quiz[]
+  exams       Exam[]
+  Grade       Grade[]
+  topics      Topic[]
+  enrollments Enrollment[] // Relationship with Enrollment model
+}
+
+model Topic {
+  topicId  String @id @default(cuid())
+  title    String
+  courseId String
+  course   Course @relation(fields: [courseId], references: [courseId], onDelete: Cascade)
+
+  // Relationships
+  contents Content[] // Relationship with Content model
+}
+
+model Content {
+  contentId String      @id @default(cuid())
+  type      ContentType
+  data      String
+  topicId   String
+  topic     Topic       @relation(fields: [topicId], references: [topicId], onDelete: Cascade)
+}
+
+enum ContentType {
+  TEXT
+  LINK
+  YOUTUBE_VIDEO
+}
+
+model Quiz {
+  quizId      String  @id @default(cuid())
+  title       String
+  description String?
+  questions   Json
+  courseId    String
+  course      Course  @relation(fields: [courseId], references: [courseId], onDelete: Cascade)
+
+  // Relationships
+  grades Grade[]
+}
+
+model Exam {
+  examId      String  @id @default(cuid())
+  title       String
+  description String?
+  questions   Json
+  courseId    String
+  course      Course  @relation(fields: [courseId], references: [courseId], onDelete: Cascade)
+
+  // Relationships
+  grades Grade[]
+}
+
+model Grade {
+  gradeId   String  @id @default(cuid())
+  studentId String
+  student   Student @relation(fields: [studentId], references: [studentId], onDelete: Cascade)
+  quizId    String?
+  quiz      Quiz?   @relation(fields: [quizId], references: [quizId], onDelete: SetNull)
+  examId    String?
+  exam      Exam?   @relation(fields: [examId], references: [examId], onDelete: SetNull)
+  score     Float
+  comment   String?
+
+  // Relationships
+  course   Course? @relation(fields: [courseId], references: [courseId], onDelete: SetNull)
+  courseId String?
+}
+
+model Message {
+  messageId  String   @id @default(cuid())
+  senderId   String?
+  receiverId String?
+  sender     User?    @relation("Sender", fields: [senderId], references: [userId], onDelete: SetNull)
+  receiver   User?    @relation("Receiver", fields: [receiverId], references: [userId], onDelete: SetNull)
+  content    String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  User User[]
+}
+
+model Session {
+  sessionId String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  userAgent String?
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+}
+
+model Enrollment {
+  enrollmentId String           @id @default(cuid())
+  studentId    String
+  student      Student          @relation(fields: [studentId], references: [studentId], onDelete: Cascade)
+  parentId     String // Link to the parent who enrolled the student
+  parent       Parent           @relation(fields: [parentId], references: [parentId], onDelete: Cascade)
+  courseId     String
+  course       Course           @relation(fields: [courseId], references: [courseId], onDelete: Cascade)
+  status       EnrollmentStatus @default(PENDING)
+  enrolledAt   DateTime         @default(now())
+
+  @@unique([studentId, courseId]) // Prevent duplicate enrollments
+}
+
+enum EnrollmentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
