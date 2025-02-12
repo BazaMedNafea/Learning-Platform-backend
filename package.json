@@ -1,12 +1,13 @@
 {
-  "name": "learning-platform-backend",
+  "name": "consulting-notes-backend",
   "version": "1.0.0",
   "description": "",
   "main": "./src/index.ts",
   "scripts": {
     "dev": "ts-node-dev --files src/index.ts",
-    "build": "npx prisma generate && npx tsc",
-    "start": "node dist/index.js"
+    "build": "npx tsc",
+    "start": "node dist/index.js",
+    "vercel-build": "npx prisma generate && npm run build "
   },
   "keywords": [],
   "author": "",
