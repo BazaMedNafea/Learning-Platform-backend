@@ -409,3 +409,145 @@ export const getTopicContentHandler = catchErrors(async (req, res) => {
 
   return res.status(OK).json(topic.contents);
 });
+
+// Get enrolled students for a course
+export const getEnrolledStudentsHandler = catchErrors(async (req, res) => {
+  const courseId = req.params.courseId;
+
+  // Validate input
+  appAssert(courseId, BAD_REQUEST, "Missing required field: courseId");
+
+  // Fetch the course with enrolled students and their details
+  const courseWithEnrollments = await prisma.course.findUnique({
+    where: { courseId },
+    include: {
+      enrollments: {
+        include: {
+          student: {
+            include: {
+              User: true, // Include the User model via the userUserId relationship
+            },
+          },
+          parent: {
+            include: {
+              user: true, // Include the User model for the parent
+            },
+          },
+        },
+      },
+    },
+  });
+
+  // Ensure the course exists
+  appAssert(courseWithEnrollments, NOT_FOUND, "Course not found");
+
+  // Explicitly type the courseWithEnrollments object
+  type CourseWithEnrollments = typeof courseWithEnrollments & {
+    enrollments: {
+      student: {
+        studentId: any;
+        firstName: string;
+        lastName: string;
+        user: {
+          firstName: string;
+          lastName: string;
+          email: string;
+        };
+      };
+      parent: {
+        user: {
+          firstName: string;
+          lastName: string;
+          email: string;
+        };
+      };
+      status: string;
+      enrolledAt: Date;
+    }[];
+  };
+
+  const typedCourseWithEnrollments =
+    courseWithEnrollments as CourseWithEnrollments;
+
+  // Extract the enrolled students and their details
+  const enrolledStudents = typedCourseWithEnrollments.enrollments.map(
+    (enrollment) => {
+      // Use the student's firstName and lastName if available, otherwise fall back to the user's firstName and lastName
+      const studentName =
+        enrollment.student.firstName && enrollment.student.lastName
+          ? `${enrollment.student.firstName} ${enrollment.student.lastName}`
+          : enrollment.student.User
+          ? `${enrollment.student.User.firstName} ${enrollment.student.User.lastName}`
+          : "";
+
+      return {
+        studentId: enrollment.student.studentId,
+        studentName, // Use the resolved student name
+        studentEmail: enrollment.student.User?.email,
+        parentName: `${enrollment.parent.user.firstName} ${enrollment.parent.user.lastName}`,
+        parentEmail: enrollment.parent.user.email,
+        enrollmentStatus: enrollment.status,
+        enrolledAt: enrollment.enrolledAt,
+      };
+    }
+  );
+
+  return res.status(OK).json(enrolledStudents);
+});
+
+// Approve a student's enrollment in a course
+export const approveEnrollmentHandler = catchErrors(async (req, res) => {
+  const { courseId, studentId } = req.params; // Get courseId and studentId from URL params
+  const teacherId = req.userId; // Get the teacher's ID from the request
+
+  console.log(
+    `Approving enrollment for studentId: ${studentId} in courseId: ${courseId}`
+  );
+
+  // Validate input
+  appAssert(
+    courseId && studentId,
+    BAD_REQUEST,
+    "Missing required fields: courseId or studentId"
+  );
+
+  // Ensure the course exists and belongs to the teacher
+  const course = await prisma.course.findUnique({
+    where: { courseId },
+    include: { teacher: true }, // Include the teacher to check ownership
+  });
+  appAssert(course, NOT_FOUND, "Course not found");
+  appAssert(
+    course.teacher.userId === teacherId,
+    UNAUTHORIZED,
+    "Unauthorized to approve enrollments for this course"
+  );
+
+  // Ensure the enrollment exists for the student in the course
+  const enrollment = await prisma.enrollment.findUnique({
+    where: {
+      studentId_courseId: {
+        studentId,
+        courseId,
+      },
+    },
+  });
+  appAssert(enrollment, NOT_FOUND, "Enrollment not found");
+
+  // Update the enrollment status to APPROVED
+  const updatedEnrollment = await prisma.enrollment.update({
+    where: {
+      studentId_courseId: {
+        studentId,
+        courseId,
+      },
+    },
+    data: {
+      status: "APPROVED",
+    },
+  });
+
+  console.log(`Enrollment approved successfully:`, updatedEnrollment);
+
+  return res.status(OK).json(updatedEnrollment);
+});

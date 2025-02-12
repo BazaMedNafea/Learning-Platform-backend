@@ -143,7 +143,13 @@ export const updateStudentHandler = catchErrors(async (req, res) => {
 
   // Validate input
   appAssert(
-    studentId && (firstName || lastName || level || year || parentId || stream),
+    studentId &&
+      (firstName ||
+        lastName ||
+        level ||
+        year ||
+        parentId ||
+        stream !== undefined),
     BAD_REQUEST,
     "Missing required fields"
   );
@@ -173,7 +179,13 @@ export const updateStudentHandler = catchErrors(async (req, res) => {
   if (level) studentUpdateData.level = level;
   if (year) studentUpdateData.year = year;
   if (parentId) studentUpdateData.parentId = parentId;
-  if (stream !== undefined) studentUpdateData.stream = stream; // Handle undefined stream
+
+  // Handle the stream property
+  if (level === "PRIMARY" || level === "MIDDLE") {
+    studentUpdateData.stream = null; // Set stream to undefined if level is PRIMARY or MIDDLE
+  } else if (stream !== undefined) {
+    studentUpdateData.stream = stream; // Set stream to the provided value if level is SECONDARY
+  }
 
   await prisma.student.update({
     where: { studentId },
@@ -234,6 +246,7 @@ export const getStudentsByParentIdHandler = catchErrors(async (req, res) => {
           course: true,
         },
       },
+      Enrollment: true,
     },
   });
 

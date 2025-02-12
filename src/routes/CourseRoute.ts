@@ -14,6 +14,8 @@ import {
   deleteContentHandler,
   getAllCoursesHandler,
   getPublicCoursesHandler,
+  getEnrolledStudentsHandler,
+  approveEnrollmentHandler,
 } from "../controllers/CourseController";
 import authenticate from "../middleware/authenticate";
 import isTeacher from "../middleware/isTeacher";
@@ -80,4 +82,18 @@ CourseRoutes.get(
   getTopicContentHandler
 );
 
+CourseRoutes.get(
+  "/:courseId/enrolledStudents",
+  authenticate,
+  isTeacher,
+  getEnrolledStudentsHandler
+);
+
 export default CourseRoutes;
+
+CourseRoutes.put(
+  "/:courseId/approveEnrollment/:studentId",
+  authenticate,
+  isTeacher,
+  approveEnrollmentHandler
+);

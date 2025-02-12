@@ -24,11 +24,6 @@ StudentRoutes.get(
 ); // Get students by parent ID
 StudentRoutes.post("/add", authenticate, addStudentHandler); // Add a student manually
 StudentRoutes.put("/:studentId", authenticate, updateStudentHandler); // Update a student
-StudentRoutes.delete(
-  "/:studentId",
-  authenticate,
-  isAdmin,
-  deleteStudentHandler
-); // Delete a student
+StudentRoutes.delete("/:studentId", authenticate, deleteStudentHandler); // Delete a student
 
 export default StudentRoutes;
