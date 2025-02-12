@@ -17,7 +17,6 @@ import {
 } from "../controllers/CourseController";
 import authenticate from "../middleware/authenticate";
 import isTeacher from "../middleware/isTeacher";
-import upload from "../utils/multer";
 
 const CourseRoutes = express.Router();
 
@@ -33,7 +32,7 @@ CourseRoutes.post(
   "/create",
   authenticate,
   isTeacher,
-  upload.single("image"), // Use Multer middleware to handle single file upload
+
   createCourseHandler
 );
 CourseRoutes.post(
@@ -49,13 +48,7 @@ CourseRoutes.post(
   addContentToTopicHandler
 );
 CourseRoutes.delete("/:courseId", authenticate, isTeacher, deleteCourseHandler);
-CourseRoutes.put(
-  "/:courseId",
-  authenticate,
-  isTeacher,
-  upload.single("image"),
-  updateCourseHandler
-);
+CourseRoutes.put("/:courseId", authenticate, isTeacher, updateCourseHandler);
 CourseRoutes.put(
   "/topic/:topicId",
   authenticate,

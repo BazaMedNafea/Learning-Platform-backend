@@ -15,13 +15,17 @@ const prisma = new PrismaClient();
 
 // Create a new course
 export const createCourseHandler = catchErrors(async (req, res) => {
-  const { title, description, isPublic, subjectId } = req.body;
+  const { title, description, isPublic, subjectId, image } = req.body;
   const teacherId = req.userId;
 
   console.log(`Creating course with teacherId: ${teacherId}`);
 
   // Validate input
-  appAssert(title, BAD_REQUEST, "Missing required fields");
+  appAssert(
+    title && description && isPublic !== undefined && subjectId && image,
+    BAD_REQUEST,
+    "Missing required fields"
+  );
 
   // Ensure the teacher exists
   const teacher = await prisma.teacher.findUnique({
@@ -33,16 +37,6 @@ export const createCourseHandler = catchErrors(async (req, res) => {
   }
 
   console.log(`Teacher found: ${JSON.stringify(teacher)}`);
-
-  // Handle image upload
-  const image = req.file;
-  if (!image) {
-    return res.status(BAD_REQUEST).json({ error: "No image uploaded" });
-  }
-
-  // Read the image file and encode it as Base64
-  const imageBuffer = fs.readFileSync(image.path);
-  const imageBase64 = imageBuffer.toString("base64");
 
   // Parse isPublic as a boolean
   const isPublicBoolean = isPublic === "true" || isPublic === true;
@@ -56,7 +50,7 @@ export const createCourseHandler = catchErrors(async (req, res) => {
         isPublic: isPublicBoolean, // Use the parsed boolean value
         teacherId: teacher.teacherId, // Use the correct teacherId
         subjectId,
-        image: imageBase64, // Store the Base64-encoded image string
+        image, // Directly use the Base64 image string
       },
     });
     return res.status(CREATED).json(course);
@@ -208,11 +202,10 @@ export const deleteCourseHandler = catchErrors(async (req, res) => {
 });
 
 // Update a course
-
 export const updateCourseHandler = catchErrors(async (req, res) => {
   const courseId = req.params.courseId;
   const teacherId = req.userId;
-  const { title, description, isPublic, subjectId } = req.body;
+  const { title, description, isPublic, subjectId, image } = req.body;
 
   console.log(`Updating course with courseId: ${courseId}`);
   console.log(`Received data:`, req.body);
@@ -232,14 +225,6 @@ export const updateCourseHandler = catchErrors(async (req, res) => {
   // Parse isPublic as a boolean
   const isPublicBoolean = isPublic === "true" || isPublic === true;
 
-  // Handle image upload if provided
-  let imageBase64 = course.image; // Default to the existing image
-  if (req.file) {
-    // Read the image file and encode it as Base64
-    const imageBuffer = fs.readFileSync(req.file.path);
-    imageBase64 = imageBuffer.toString("base64");
-  }
-
   // Update the course
   const updatedCourse = await prisma.course.update({
     where: { courseId },
@@ -248,7 +233,7 @@ export const updateCourseHandler = catchErrors(async (req, res) => {
       description,
       isPublic: isPublicBoolean, // Use the parsed boolean value
       subjectId,
-      image: imageBase64, // Update the image field
+      image, // Directly use the Base64 image string
     },
   });
 
@@ -256,6 +241,7 @@ export const updateCourseHandler = catchErrors(async (req, res) => {
 
   return res.status(OK).json(updatedCourse);
 });
+
 // Update a topic
 export const updateTopicHandler = catchErrors(async (req, res) => {
   const topicId = req.params.topicId;
