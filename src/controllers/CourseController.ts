@@ -116,8 +116,12 @@ export const getPublicCoursesHandler = catchErrors(async (req, res) => {
 
 // Add a topic to a course
 export const addTopicToCourseHandler = catchErrors(async (req, res) => {
-  const { courseId, title } = req.body;
+  const courseId = req.params.courseId; // Get courseId from URL params
+  const { title } = req.body; // Get title from body
   const teacherId = req.userId;
+
+  console.log(`Adding topic to course with courseId: ${courseId}`);
+  console.log(`Received data:`, req.body);
 
   // Validate input
   appAssert(courseId && title, BAD_REQUEST, "Missing required fields");
@@ -144,10 +148,10 @@ export const addTopicToCourseHandler = catchErrors(async (req, res) => {
 
   return res.status(CREATED).json(topic);
 });
-
 // Add content to a topic
 export const addContentToTopicHandler = catchErrors(async (req, res) => {
-  const { topicId, type, data } = req.body;
+  const topicId = req.params.topicId; // Get topicId from URL params
+  const { type, data } = req.body;
   const teacherId = req.userId;
 
   // Validate input
